@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.logging.LogRecord;
 
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
 
 import hudson.Plugin;
 import hudson.init.InitMilestone;
@@ -175,9 +176,22 @@ public class PluginImpl extends Plugin {
 	/** {@inheritDoc} */
 	@Override
 	public void stop() throws Exception {
-		if (filter != null && filter.getNodesCollector() != null) {
-			filter.getNodesCollector().stop();
+		final HudsonMonitoringFilter filterToStop = filter;
+		filter = null;
+		if (filterToStop != null) {
+			stopFilter(filterToStop);
 		}
 		super.stop();
+	}
+
+	static void stopFilter(HudsonMonitoringFilter filter) throws ServletException {
+		try {
+			if (filter.getNodesCollector() != null) {
+				filter.getNodesCollector().stop();
+			}
+		} finally {
+			PluginServletFilter.removeFilter(filter);
+			filter.destroy();
+		}
 	}
 }
